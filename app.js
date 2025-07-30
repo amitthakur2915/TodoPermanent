@@ -1,65 +1,56 @@
 const express = require('express');
-const app = express();
 const mongoose = require('mongoose');
+const path = require('path');
+require('dotenv').config(); // Load env variables from .env file
 
-// Middleware
+const app = express();
+const PORT = process.env.PORT || 8000;
+
+// ✅ Use .env for MongoDB URI (recommended)
+const mongoURL = process.env.MONGO_URI;
+
+// ✅ Middleware
 app.set("view engine", "ejs");
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, 'public')));
 
-// ✅ Correct MongoDB Atlas URI (password encoded)
-const mongoURL = 'mongodb+srv://amitthakur2915:Amit%402915@cluster0.fwxgjnn.mongodb.net/todoDB?retryWrites=true&w=majority';
-
-// ✅ MongoDB Connection
+// ✅ MongoDB Connection (no deprecated options)
 mongoose.connect(mongoURL)
   .then(() => console.log("✅ MongoDB connected successfully!"))
   .catch((err) => console.error("❌ MongoDB connection error:", err));
 
 // ✅ Schema & Model
-const trySchema = new mongoose.Schema({
-  name: String
-});
+const trySchema = new mongoose.Schema({ name: String });
 const Item = mongoose.model("Task", trySchema);
 
-// ✅ GET Route: Show all todos
-app.get("/", async function (req, res) {
+// ✅ Routes
+app.get("/", async (req, res) => {
   try {
     const foundItems = await Item.find({});
     res.render("list", { dayej: foundItems });
   } catch (err) {
-    console.log(err);
-    res.status(500).send("Something went wrong.");
+    res.status(500).send("Server Error");
   }
 });
 
-// ✅ POST Route: Add new todo
-app.post("/", async function (req, res) {
+app.post("/", async (req, res) => {
   const newItemName = req.body.ele1;
   if (newItemName.trim()) {
-    try {
-      const newItem = new Item({ name: newItemName });
-      await newItem.save();
-    } catch (err) {
-      console.log(err);
-    }
+    await new Item({ name: newItemName }).save();
   }
   res.redirect("/");
 });
 
-// ✅ POST Route: Delete todo
-app.post("/delete", async function (req, res) {
-  const checkedId = req.body.checkbox1;
+app.post("/delete", async (req, res) => {
   try {
-    await Item.findByIdAndDelete(checkedId);
-    console.log("🗑️ Deleted item:", checkedId);
+    await Item.findByIdAndDelete(req.body.checkbox1);
     res.redirect("/");
   } catch (err) {
-    console.log(err);
-    res.status(500).send("Failed to delete item");
+    res.status(500).send("Delete failed");
   }
 });
 
 // ✅ Start Server
-app.listen(8000, function () {
-  console.log("🚀 Server is running on http://localhost:8000");
+app.listen(PORT, () => {
+  console.log(`🚀 Server is running on http://localhost:${PORT}`);
 });
